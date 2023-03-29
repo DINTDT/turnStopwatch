@@ -1,83 +1,106 @@
+<head>
+	<meta charset="utf-8"></meta>
+</head>
 <style>
-    *{font-family:sans-serif}
-    body{margin:0}
-    #clocksContainer{display:flex;justify-content:center;
-        align-items:center;height:80%;background:#555;
-        flex-wrap:wrap;;align-content:center}
-    .clock{background:#999;display:flex;height:20vh;width:20vw;
-        color:#fff;justify-content:center;align-items:center;
-        position:relative;}
-    .clock:nth-child(2n){background:#AAA}
-    .clock.active{background-color:#C81}
-    .clockTime{font-size:2.5rem;}
-    .clockRemoveBtn{position:absolute;top:0.5rem;right:0.5rem;padding:0.5rem;cursor:pointer}
+	*{font-family:sans-serif}
+	body{margin:0}
+	#clocksContainer{display:flex;justify-content:center;
+		align-items:center;height:80%;background:#555;
+		flex-wrap:wrap;;align-content:center}
+	.clock{background:#999;display:flex;height:20vh;width:20vw;
+		color:#fff;justify-content:center;align-items:center;
+		position:relative;flex-direction:column}
+	.clock:nth-child(2n){background:#AAA}
+	.clock.active{background-color:#E92}
+	.clockTime{font-size:2.5rem;font-family:monospace}
+	.clockRemoveBtn{position:absolute;top:0.5rem;right:0.5rem;padding:0.5rem;cursor:pointer}
+	.milliseconds{font-size:1.6rem;font-family:monospace}
 </style>
 <div id="clocksContainer">
-    <div class="clock active">
-        <span class="clockTime" data-seconds="0">00:00</span>
-        <a class="clockRemoveBtn" onclick="closeBtnClicked(this)">×</a>
-    </div>
+	<div class="clock active">
+		<a class="clockRemoveBtn" onclick="closeBtnClicked(this)">×</a>
+		<div class="clockTime" data-time="0">00:00<span class='milliseconds'>:000</span></div>
+		<div class='clockLabel' contentEditable=true spellcheck=false>Clock #1</div>
+	</div>
 </div>
 <div id="controlsContainer">
-    <div class="column">
-        <button id="addBtn" onclick="addClock()">Add Clock</button>
-        <button id="startBtn" onclick="startClock()">Start</button>
-        <button id="nextBtn" onclick="nextClock()">Next</button>
-    </div>
+	<div class="column">
+		<button id="addBtn" onclick="addClock()">Add Clock</button>
+		<button id="startBtn" onclick="startClock()">Start</button>
+		<button id="startBtn" onclick="pauseClock()">Pause</button>
+		<button id="nextBtn" onclick="nextClock()">Next</button>
+	</div>
 </div>
 <script>
-    var timer;
-    function get(id){return document.getElementById(id)}
-    function getClockCount(){return get("clocksContainer").children.length}
-    function addClock(){
-        c=document.createElement("div");
-        c.classList.add("clock")
-        if(getClockCount()==0){
-            c.classList.add("active");
-        }
-        get("clocksContainer").appendChild(c);
-        c.innerHTML="<span class='clocktime' data-seconds='0'>00:00</span>"+
-            "<a class='clockRemoveBtn' onclick='closeBtnClicked(this)'>×</a>";
-    }
-    function closeBtnClicked(e){
-        removeClock(e.parentElement);
-    }
-    function removeClock(e){
-        if(e.classList.contains("active")&&getClockCount()>1){
-            if(e.nextElementSibling)
-                e.nextElementSibling.classList.add("active");
-            else
-                e.previousElementSibling.classList.add("active");
-        }
-        e.remove();
-    }
-    function nextClock(){
-        if(getClockCount<=1)return;
-        active=document.getElementsByClassName("active")[0];
-        newActive=active.nextElementSibling;
-        if(!newActive)newActive=active.parentElement.children[0];
-        active.classList.remove("active");
-        newActive.classList.add("active");
-        clearInterval(timer);
-        startClock();
-    }
-    function startClock(){
-        if(getClockCount()==0) return;
-        timer=setInterval(tick,1000);
-    }
-    function tick(){
-        active=document.getElementsByClassName("active")[0];
-        active.children[0].dataset["seconds"]=parseInt(active.children[0].dataset["seconds"])+1;
-        updateClock(active);
-    }
-    function updateClock(c){
-        seconds=parseInt(c.children[0].dataset["seconds"]);
-        c.children[0].innerText=formatSeconds(seconds);
-    }
-    function formatSeconds(s){
-        h=Math.floor(s/3600);
-        m=Math.floor((s%3600)/60);
-        s=s%60;
-        return (h>0?h+":":"")+m.toString().padStart(2,"0")+":"+s.toString().padStart(2,"0");
-    }
+	var timer;
+	var lastTime;
+	function get(id){return document.getElementById(id)}
+	function getClockCount(){return get("clocksContainer").children.length}
+	function addClock(){
+		c=document.createElement("div");
+		c.classList.add("clock")
+		if(getClockCount()==0){
+			c.classList.add("active");
+		}
+		get("clocksContainer").appendChild(c);
+		c.innerHTML="<a class='clockRemoveBtn' onclick='closeBtnClicked(this)'>×</a>"+
+			"<div class='clocktime' data-time='0'>00:00"+
+			"<span class='milliseconds'>:000</span></div>"+
+			"<div class='label' contentEditable=true spellcheck=false>Clock #"+getClockCount()+"</div>";
+	}
+	function closeBtnClicked(e){
+		removeClock(e.parentElement);
+	}
+	function removeClock(e){
+		if(e.classList.contains("active")&&getClockCount()>1){
+			if(e.nextElementSibling)
+				e.nextElementSibling.classList.add("active");
+			else
+				e.previousElementSibling.classList.add("active");
+		}
+		e.remove();
+	}
+	function nextClock(){
+		if(getClockCount<=1)return;
+		active=document.getElementsByClassName("active")[0];
+		newActive=active.nextElementSibling;
+		//if active was last child, wrap back to first
+		if(!newActive)newActive=active.parentElement.children[0];
+		active.classList.remove("active");
+		newActive.classList.add("active");
+		clearInterval(timer);
+		startClock();
+	}
+	function startClock(){
+		if(getClockCount()==0) return;
+		lastTime=Date.now();
+		timer=setInterval(tick,0);
+	}
+	function pauseClock(){
+		clearInterval(timer)
+	}
+	function tick(){
+		now=Date.now();
+		delta=now-lastTime;
+		lastTime=now;
+		active=document.getElementsByClassName("active")[0];
+		active.children[1].dataset["time"]=parseInt(active.children[1].dataset["time"])+delta;
+		updateClock(active);
+	}
+	function updateClock(c){
+		time=parseInt(c.children[1].dataset["time"]);
+		t=formatTime(time);
+		c.children[1].innerHTML=(t[0]>0?t[0]+":":"")+
+			t[1].toString().padStart(2,"0")+":"+
+			t[2].toString().padStart(2,"0")+
+			"<span class='milliseconds'>:"+t[3].toString().padStart(3,"0")+"</span>";
+	}
+	function formatTime(ms){
+		s=Math.floor(ms/1000);
+		h=Math.floor(s/3600);
+		m=Math.floor((s%3600)/60);
+		s=s%60;
+		ms=ms%1000;
+		return [h,m,s,ms]
+	}
 </script>
