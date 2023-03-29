@@ -2,20 +2,19 @@
     *{font-family:sans-serif}
     body{margin:0}
     #clocksContainer{display:flex;justify-content:center;
-        align-items:center;height:80%;background:#555;}
-    #clocksContainer.wrap{display:grid;grid-template-columns:repeat(auto-fill, 20%);
-        flex-wrap:wrap;align-content:center}
+        align-items:center;height:80%;background:#555;
+        flex-wrap:wrap;;align-content:center}
     .clock{background:#999;display:flex;height:20vh;width:20vw;
         color:#fff;justify-content:center;align-items:center;
         position:relative;}
-    .clock.active{background-color:#C81}
     .clock:nth-child(2n){background:#AAA}
+    .clock.active{background-color:#C81}
     .clockTime{font-size:2.5rem;}
     .clockRemoveBtn{position:absolute;top:0.5rem;right:0.5rem;padding:0.5rem;cursor:pointer}
 </style>
-<div id="clocksContainer" data-children=1>
+<div id="clocksContainer">
     <div class="clock active">
-        <span class="clockTime" data-seconds="0">0:00</span>
+        <span class="clockTime" data-seconds="0">00:00</span>
         <a class="clockRemoveBtn" onclick="closeBtnClicked(this)">×</a>
     </div>
 </div>
@@ -27,34 +26,58 @@
     </div>
 </div>
 <script>
+    var timer;
     function get(id){return document.getElementById(id)}
-    function updateContainerStyle(){
-        cont=get("clocksContainer");
-        if(parseInt(cont.dataset["children"])>5){
-            cont.classList.add("wrap")
-        } else {
-            cont.classList.remove("wrap")
-        }
-    }
+    function getClockCount(){return get("clocksContainer").children.length}
     function addClock(){
         c=document.createElement("div");
+        c.classList.add("clock")
+        if(getClockCount()==0){
+            c.classList.add("active");
+        }
         get("clocksContainer").appendChild(c);
-        c.outerHTML="<div class='clock'>"+
-            "<span class='clocktime'>0:00</span>"+
-            "<a class='clockRemoveBtn' onclick='closeBtnClicked(this)'>×</a>"+
-            "</div>";
-        get("clocksContainer").dataset["children"]=parseInt(get("clocksContainer").dataset["children"])+1;
-        updateContainerStyle();
+        c.innerHTML="<span class='clocktime' data-seconds='0'>00:00</span>"+
+            "<a class='clockRemoveBtn' onclick='closeBtnClicked(this)'>×</a>";
     }
     function closeBtnClicked(e){
         removeClock(e.parentElement);
     }
     function removeClock(e){
+        if(e.classList.contains("active")&&getClockCount()>1){
+            if(e.nextElementSibling)
+                e.nextElementSibling.classList.add("active");
+            else
+                e.previousElementSibling.classList.add("active");
+        }
         e.remove();
-        get("clocksContainer").dataset["children"]=parseInt(get("clocksContainer").dataset["children"])-1;
-        updateContainerStyle();
+    }
+    function nextClock(){
+        if(getClockCount<=1)return;
+        active=document.getElementsByClassName("active")[0];
+        newActive=active.nextElementSibling;
+        if(!newActive)newActive=active.parentElement.children[0];
+        active.classList.remove("active");
+        newActive.classList.add("active");
+        clearInterval(timer);
+        startClock();
     }
     function startClock(){
+        if(getClockCount()==0) return;
+        timer=setInterval(tick,1000);
+    }
+    function tick(){
         active=document.getElementsByClassName("active")[0];
+        active.children[0].dataset["seconds"]=parseInt(active.children[0].dataset["seconds"])+1;
+        updateClock(active);
+    }
+    function updateClock(c){
+        seconds=parseInt(c.children[0].dataset["seconds"]);
+        c.children[0].innerText=formatSeconds(seconds);
+    }
+    function formatSeconds(s){
+        h=Math.floor(s/3600);
+        m=Math.floor((s%3600)/60);
+        s=s%60;
+        return (h>0?h+":":"")+m.toString().padStart(2,"0")+":"+s.toString().padStart(2,"0");
     }
 </script>
